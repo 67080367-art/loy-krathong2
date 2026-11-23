@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ลอยกระทงออนไลน์ด้วยกัน</title>
+  <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Prompt', sans-serif; }
+    body {
+      overflow: hidden;
+      background: linear-gradient(to bottom, #070b24 0%, #141e46 45%, #1b3159 60%, #09152b 100%);
+      height: 100vh;
+      color: #fff;
+      position: relative;
+    }
+
+    /* ท้องฟ้าและพระจันทร์ */
+    .sky { position: absolute; top: 0; left: 0; width: 100%; height: 48vh; overflow: hidden; z-index: 1; }
+    .moon {
+      position: absolute; top: 30px; right: 10%; width: 85px; height: 85px; border-radius: 50%;
+      background: radial-gradient(circle, #fff9d6 40%, #ffe680 80%, rgba(255,230,128,0) 100%);
+      box-shadow: 0 0 40px 15px rgba(255, 238, 153, 0.35);
+    }
+    .star { position: absolute; background: #fff; border-radius: 50%; animation: twinkle 3s infinite ease-in-out; }
+    @keyframes twinkle { 0%, 100% { opacity: 0.2; } 50% { opacity: 1; } }
+
+    /* แม่น้ำ */
+    .river {
+      position: absolute; bottom: 0; left: 0; width: 100%; height: 56vh;
+      background: linear-gradient(to bottom, rgba(16, 40, 82, 0.9) 0%, #071326 100%);
+      border-top: 2px solid rgba(255, 230, 128, 0.15);
+      overflow: hidden; z-index: 2;
+    }
+
+    /* หัวเว็บ */
+    header {
+      position: relative; z-index: 10; display: flex; justify-content: space-between;
+      align-items: center; padding: 16px 20px;
+    }
+    h1 { font-size: 1.25rem; color: #ffe680; text-shadow: 0 2px 10px rgba(255, 215, 0, 0.4); }
+    .btn-add {
+      background: linear-gradient(135deg, #ffb703, #fb8500); color: #141e46; border: none;
+      padding: 10px 18px; border-radius: 30px; font-size: 0.95rem; font-weight: 600;
+      cursor: pointer; box-shadow: 0 4px 15px rgba(255, 183, 3, 0.4);
+    }
+
+    /* กระทงในแม่น้ำ */
+    .krathong-wrapper {
+      position: absolute; display: flex; flex-direction: column; align-items: center;
+      animation: floatAcross var(--duration, 35s) linear infinite, bobbing 3s ease-in-out infinite;
+      z-index: 5;
+    }
+    .krathong-wrapper:hover { animation-play-state: paused; z-index: 20; }
+    @keyframes floatAcross { 0% { transform: translateX(-180px); } 100% { transform: translateX(calc(100vw + 180px)); } }
+    @keyframes bobbing { 0%, 100% { margin-top: 0px; } 50% { margin-top: 7px; } }
+    .flame { transform-origin: center bottom; animation: flicker 0.5s infinite alternate; }
+    @keyframes flicker { 0% { transform: scale(1) rotate(-2deg); } 100% { transform: scale(1.12) rotate(2deg); } }
+
+    .wish-bubble {
+      background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(255, 230, 128, 0.5);
+      padding: 5px 10px; border-radius: 12px; font-size: 0.78rem; text-align: center;
+      margin-bottom: 4px; max-width: 170px; backdrop-filter: blur(4px);
+    }
+    .wish-name { font-weight: 600; color: #ffe680; display: block; }
+    .wish-text { color: #e2e8f0; word-wrap: break-word; }
+
+    /* หน้าต่างตกแต่งกระทง (Modal) */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0, 0, 0, 0.75);
+      display: none; justify-content: center; align-items: center; z-index: 100;
+      padding: 15px; backdrop-filter: blur(4px);
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: #141e46; border: 1px solid rgba(255, 230, 128, 0.3);
+      padding: 20px; border-radius: 20px; width: 100%; max-width: 420px;
+      max-height: 92vh; overflow-y: auto;
+    }
+    .modal h2 { color: #ffe680; text-align: center; font-size: 1.2rem; margin-bottom: 10px; }
+
+    /* กล่องพรีวิวกระทงสดๆ */
+    .preview-box {
+      background: radial-gradient(circle, #1e3a6e 0%, #09152b 100%);
+      border-radius: 14px; padding: 10px; text-align: center; margin-bottom: 14px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 5px; font-size: 0.85rem; color: #cbd5e1; }
+    .form-group input, .form-group textarea {
+      width: 100%; padding: 8px 10px; border-radius: 10px; border: 1px solid #334155;
+      background: #0f172a; color: #fff; font-size: 0.9rem;
+    }
+
+    /* ตัวเลือกตกแต่ง */
+    .option-row { display: flex; gap: 6px; flex-wrap: wrap; }
+    .chip {
+      flex: 1; min-width: 70px; padding: 7px 6px; border-radius: 10px; border: 2px solid transparent;
+      background: #0f172a; color: #cbd5e1; font-size: 0.8rem; text-align: center; cursor: pointer;
+    }
+    .chip.selected { border-color: #ffb703; background: rgba(255, 183, 3, 0.15); color: #ffe680; }
+
+    .color-dot {
+      width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
+      border: 2px solid transparent; transition: transform 0.15s;
+    }
+    .color-dot.selected { border-color: #fff; transform: scale(1.15); }
+
+    .modal-actions { display: flex; gap: 10px; margin-top: 16px; }
+    .btn-cancel {
+      flex: 1; padding: 10px; border-radius: 12px; border: 1px solid #475569;
+      background: transparent; color: #cbd5e1; cursor: pointer;
+    }
+    .btn-submit {
+      flex: 2; padding: 10px; border-radius: 12px; border: none;
+      background: linear-gradient(135deg, #ffb703, #fb8500); color: #141e46;
+      font-weight: 600; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>🌕 ลอยกระทงออนไลน์</h1>
+    <button class="btn-add" onclick="openModal()">+ ตกแต่งกระทง</button>
+  </header>
+
+  <div class="sky" id="sky"><div class="moon"></div></div>
+  <div class="river" id="river"></div>
+
+  <!-- หน้าต่างตกแต่งกระทง -->
+  <div class="modal-overlay" id="modal">
+    <div class="modal">
+      <h2>🪷 ออกแบบกระทงของคุณ</h2>
+
+      <!-- พรีวิวกระทงแบบสดๆ -->
+      <div class="preview-box" id="krathongPreview"></div>
+
+      <div class="form-group">
+        <label>1. เลือกฐานกระทง</label>
+        <div class="option-row" id="baseOptions">
+          <div class="chip selected" data-val="banana" onclick="setOpt('base', this)">🌿 ใบตอง</div>
+          <div class="chip" data-val="bread" onclick="setOpt('base', this)">🍞 ขนมปัง</div>
+          <div class="chip" data-val="coconut" onclick="setOpt('base', this)">🥥 กะลา</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>2. เลือกสีกลีบกระทง</label>
+        <div class="option-row" id="petalOptions">
+          <div class="color-dot selected" style="background:#40916c" data-val="green" onclick="setOpt('petal', this)"></div>
+          <div class="color-dot" style="background:#ff70a6" data-val="pink" onclick="setOpt('petal', this)"></div>
+          <div class="color-dot" style="background:#9d4edd" data-val="purple" onclick="setOpt('petal', this)"></div>
+          <div class="color-dot" style="background:#ffb703" data-val="gold" onclick="setOpt('petal', this)"></div>
+          <div class="color-dot" style="background:#4cc9f0" data-val="blue" onclick="setOpt('petal', this)"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>3. เลือกดอกไม้ตกแต่ง</label>
+        <div class="option-row" id="flowerOptions">
+          <div class="chip selected" data-val="marigold" onclick="setOpt('flower', this)">🌼 ดาวเรือง</div>
+          <div class="chip" data-val="lotus" onclick="setOpt('flower', this)">🪷 ดอกบัว</div>
+          <div class="chip" data-val="rose" onclick="setOpt('flower', this)">🌹 กุหลาบ</div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>4. สีเทียนมงคล</label>
+        <div class="option-row" id="candleOptions">
+          <div class="color-dot selected" style="background:#ffd166" data-val="#ffd166" onclick="setOpt('candle', this)"></div>
+          <div class="color-dot" style="background:#ff595e" data-val="#ff595e" onclick="setOpt('candle', this)"></div>
+          <div class="color-dot" style="background:#ffffff" data-val="#ffffff" onclick="setOpt('candle', this)"></div>
+          <div class="color-dot" style="background:#ff85a1" data-val="#ff85a1" onclick="setOpt('candle', this)"></div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>ชื่อของคุณ</label>
+        <input type="text" id="userName" placeholder="ใส่ชื่อเล่นหรือไอจี..." maxlength="25" />
+      </div>
+
+      <div class="form-group">
+        <label>คำอธิษฐาน</label>
+        <textarea id="userWish" rows="2" placeholder="พิมพ์คำอธิษฐาน..." maxlength="90"></textarea>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-cancel" onclick="closeModal()">ยกเลิก</button>
+        <button class="btn-submit" onclick="submitKrathong()">ปล่อยกระทงเลย! 🪷</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // 🔴 เอาลิงก์ Firebase Realtime Database มาวางตรงนี้ (ลงท้ายด้วย /krathongs.json)
+    // ตัวอย่าง: "https://loy-krathong-123-default-rtdb.asia-southeast1.firebasedatabase.app/krathongs.json"
+    const FIREBASE_DB_URL = "YOUR_FIREBASE_URL/krathongs.json";
+
+    const river = document.getElementById('river');
+    const sky = document.getElementById('sky');
+    const modal = document.getElementById('modal');
+
+    // ค่าเริ่มต้นการตกแต่ง
+    let customConfig = {
+      base: 'banana',
+      petal: 'green',
+      flower: 'marigold',
+      candle: '#ffd166'
+    };
+
+    // สร้างดาว
+    for (let i = 0; i < 50; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      const size = Math.random() * 2.5 + 1;
+      star.style.width = `${size}px`; star.style.height = `${size}px`;
+      star.style.top = `${Math.random() * 90}%`; star.style.left = `${Math.random() * 100}%`;
+      sky.appendChild(star);
+    }
+
+    // โทนสีตามตัวเลือก
+    const baseColors = {
+      banana: { main: '#2d6a4f', rim: '#74c69d' },
+      bread:  { main: '#d4a373', rim: '#faedcd' },
+      coconut:{ main: '#5c4033', rim: '#8d6e63' }
+    };
+
+    const petalColors = {
+      green:  { back: '#74c69d', front: '#40916c' },
+      pink:   { back: '#ff9ebb', front: '#ff477e' },
+      purple: { back: '#c77dff', front: '#7b2cbf' },
+      gold:   { back: '#ffe66d', front: '#f4a261' },
+      blue:   { back: '#90e0ef', front: '#0096c7' }
+    };
+
+    const flowerColors = {
+      marigold: { outer: '#ffb703', inner: '#fb8500' },
+      lotus:    { outer: '#ff85a1', inner: '#ffe5ec' },
+      rose:     { outer: '#e63946', inner: '#ffb3c1' }
+    };
+
+    // ฟังก์ชันวาด SVG กระทงตามที่ผู้ใช้ตกแต่ง
+    function buildKrathongSVG(cfg) {
+      const b = baseColors[cfg.base] || baseColors.banana;
+      const p = petalColors[cfg.petal] || petalColors.green;
+      const f = flowerColors[cfg.flower] || flowerColors.marigold;
+      const candleColor = cfg.candle || '#ffd166';
+
+      return `
+        <svg width="130" height="110" viewBox="0 0 220 190" xmlns="http://www.w3.org/2000/svg">
+          <!-- ธูป -->
+          <line x1="96" y1="105" x2="84" y2="52" stroke="#d4a373" stroke-width="3" stroke-linecap="round" />
+          <line x1="110" y1="105" x2="110" y2="48" stroke="#d4a373" stroke-width="3" stroke-linecap="round" />
+          <line x1="124" y1="105" x2="136" y2="52" stroke="#d4a373" stroke-width="3" stroke-linecap="round" />
+          <circle cx="84" cy="52" r="2.5" fill="#ff5400" />
+          <circle cx="110" cy="48" r="2.5" fill="#ff5400" />
+          <circle cx="136" cy="52" r="2.5" fill="#ff5400" />
+
+          <!-- เทียน -->
+          <rect x="103" y="58" width="14" height="50" rx="3" fill="${candleColor}" />
+
+          <!-- เปลวไฟ -->
+          <g class="flame">
+            <path d="M110,25 C118,38 118,52 110,56 C102,52 102,38 110,25 Z" fill="#ff9f1c" />
+            <path d="M110,35 C114,44 114,51 110,54 C106,51 106,44 110,35 Z" fill="#fff9d6" />
+          </g>
+
+          <!-- กลีบชั้นหลัง -->
+          <path d="M40,115 Q55,65 70,115 Z" fill="${p.back}" />
+          <path d="M68,115 Q85,55 102,115 Z" fill="${p.back}" />
+          <path d="M93,115 Q110,50 127,115 Z" fill="${p.back}" />
+          <path d="M118,115 Q135,55 152,115 Z" fill="${p.back}" />
+          <path d="M150,115 Q165,65 180,115 Z" fill="${p.back}" />
+
+          <!-- ดอกไม้ -->
+          <circle cx="65" cy="112" r="10" fill="${f.outer}" />
+          <circle cx="65" cy="112" r="4.5" fill="${f.inner}" />
+          <circle cx="110" cy="108" r="12" fill="${f.outer}" />
+          <circle cx="110" cy="108" r="5.5" fill="${f.inner}" />
+          <circle cx="155" cy="112" r="10" fill="${f.outer}" />
+          <circle cx="155" cy="112" r="4.5" fill="${f.inner}" />
+
+          <!-- กลีบชั้นหน้า -->
+          <path d="M28,125 Q50,78 72,125 Z" fill="${p.front}" />
+          <path d="M65,125 Q90,72 115,125 Z" fill="${p.front}" />
+          <path d="M105,125 Q130,72 155,125 Z" fill="${p.front}" />
+          <path d="M148,125 Q170,78 192,125 Z" fill="${p.front}" />
+
+          <!-- ฐานกระทง -->
+          <path d="M25,122 Q110,145 195,122 L182,152 Q110,175 38,152 Z" fill="${b.main}" />
+          <path d="M27,127 Q110,150 193,127" fill="none" stroke="${b.rim}" stroke-width="3.5" />
+          <ellipse cx="110" cy="175" rx="75" ry="7" fill="rgba(255, 230, 128, 0.25)" />
+        </svg>
+      `;
+    }
+
+    // อัปเดตพรีวิวในหน้าต่างตกแต่ง
+    function updatePreview() {
+      document.getElementById('krathongPreview').innerHTML = buildKrathongSVG(customConfig);
+    }
+
+    function setOpt(type, el) {
+      el.parentElement.querySelectorAll('.selected').forEach(item => item.classList.remove('selected'));
+      el.classList.add('selected');
+      customConfig[type] = el.dataset.val;
+      updatePreview();
+    }
+
+    function openModal() {
+      updatePreview();
+      modal.classList.add('active');
+    }
+    function closeModal() { modal.classList.remove('active'); }
+
+    function escapeHTML(str) {
+      return String(str).replace(/[&<>'"]/g, tag => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+      }[tag]));
+    }
+
+    // แสดงกระทงในแม่น้ำ
+    const renderedIds = new Set();
+    function renderKrathong(id, data, startNow = false) {
+      if (renderedIds.has(id)) return;
+      renderedIds.add(id);
+
+      const wrapper = document.createElement('div');
+      wrapper.className = 'krathong-wrapper';
+      const topPercent = Math.random() * 62 + 8;
+      const duration = Math.random() * 20 + 28;
+      const scale = 0.75 + (topPercent / 100) * 0.4;
+
+      wrapper.style.top = `${topPercent}%`;
+      wrapper.style.setProperty('--duration', `${duration}s`);
+      wrapper.style.transform = `scale(${scale})`;
+      if (!startNow) wrapper.style.animationDelay = `-${Math.random() * duration}s, 0s`;
+
+      wrapper.innerHTML = `
+        <div class="wish-bubble">
+          <span class="wish-name">${escapeHTML(data.name)}</span>
+          <span class="wish-text">${escapeHTML(data.wish)}</span>
+        </div>
+        ${buildKrathongSVG(data.config || customConfig)}
+      `;
+      river.appendChild(wrapper);
+    }
+
+    // โหลดกระทงทั้งหมดจาก Firebase
+    async function loadAllKrathongs() {
+      if (FIREBASE_DB_URL.includes("YOUR_FIREBASE_URL")) {
+        // กรณียังไม่ใส่ Firebase จะโชว์ตัวอย่าง
+        renderKrathong('demo1', { name: 'เจ้าของเว็บ', wish: 'มาลอยกระทงด้วยกันนะ!', config: customConfig });
+        return;
+      }
+      try {
+        const res = await fetch(FIREBASE_DB_URL);
+        const data = await res.json();
+        if (data) {
+          Object.entries(data).forEach(([id, item]) => renderKrathong(id, item, false));
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    // ส่งกระทงใหม่ขึ้น Firebase
+    async function submitKrathong() {
+      const name = document.getElementById('userName').value.trim() || 'ผู้ไม่ประสงค์ออกนาม';
+      const wish = document.getElementById('userWish').value.trim() || 'ขอให้มีความสุขสมหวัง';
+      const payload = { name, wish, config: { ...customConfig }, createdAt: Date.now() };
+
+      if (!FIREBASE_DB_URL.includes("YOUR_FIREBASE_URL")) {
+        try {
+          const res = await fetch(FIREBASE_DB_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const result = await res.json();
+          renderKrathong(result.name, payload, true);
+        } catch (e) { alert('ส่งข้อมูลไม่สำเร็จ ลองใหม่อีกครั้ง'); }
+      } else {
+        renderKrathong('local_' + Date.now(), payload, true);
+      }
+
+      document.getElementById('userName').value = '';
+      document.getElementById('userWish').value = '';
+      closeModal();
+    }
+
+    loadAllKrathongs();
+    // เช็กกระทงใหม่ของเพื่อนๆ ทุก 5 วินาที
+    setInterval(loadAllKrathongs, 5000);
+  </script>
+</body>
+</html>
